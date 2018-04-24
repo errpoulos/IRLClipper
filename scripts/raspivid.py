@@ -1,10 +1,45 @@
 import os
-<<<<<<< HEAD
-##os.system('cd scripts')
-=======
->>>>>>> f76dbbf6ccb84a84cad0f1651291a1777fe69ca7
-os.system('raspivid -o newvid.h264 -k -rf rgb -pf high -drc low -sa -50 -vs -br 40 -fps 30 -b 1200000000')
-os.system('MP4Box -add newvid.h264 newvid.mp4 -fps 32')
-os.system('omxplayer newvid.mp4')
+import subprocess
+import threading
+import time
+from screen import *
 
 
+RASPIVIDCMD = ["raspivid"]
+TIMETOWAITFORABORT = 0.5
+
+#class for controlling the running and shutting down of raspivid
+class RaspiVidController(threading.Thread):
+    def __init__(self, filePath, otherOptions=None):
+        threading.Thread.__init__(self)
+        
+        #setup the raspivid cmd
+        self.raspividcmd = RASPIVIDCMD
+
+        #add file path, timeout and preview to options
+        self.raspividcmd.append("-o")
+        self.raspividcmd.append(filePath)
+        
+
+        #if there are other options, add them
+        if otherOptions != None:
+            self.raspividcmd = self.raspividcmd + otherOptions
+
+        #set state to not running
+        self.running = False
+        
+    def run(self):
+        #run raspivid
+        raspivid = subprocess.Popen(self.raspividcmd)
+        
+        #loop until its set to stopped or it stops
+        self.running = True
+        while(self.running and raspivid.poll() is None):
+            time.sleep(TIMETOWAITFORABORT)
+        self.running = False
+        
+        #kill raspivid if still running
+        if raspivid.poll() == True: raspivid.kill()
+
+    def stopController(self):
+        self.running = False
